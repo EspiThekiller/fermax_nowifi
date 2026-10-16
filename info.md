@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/carlosespinosamoreno99/fermax_nowifi/main/images/icon.png" width="96" height="96" alt="Fermax NOWIFI Logo">
+  <img src="https://raw.githubusercontent.com/EspiThekiller/fermax_nowifi/main/images/icon.png" width="96" height="96" alt="Fermax NOWIFI Logo">
 </p>
 
 # Fermax NOWIFI para Home Assistant (HACS)

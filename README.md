@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/carlosespinosamoreno99/fermax_nowifi/main/images/icon.png" width="120" height="120" alt="Fermax NOWIFI Logo">
+  <img src="https://raw.githubusercontent.com/EspiThekiller/fermax_nowifi/main/images/icon.png" width="120" height="120" alt="Fermax NOWIFI Logo">
 </p>
 
 <h1 align="center">Fermax NOWIFI para Home Assistant</h1>
@@ -76,7 +76,7 @@ Esta integración implementa de forma nativa todos estos contratos de datos desc
 2. Haz clic en los tres puntos de la esquina superior derecha y selecciona **Repositorios personalizados**.
 3. Añade la URL de este repositorio:
    ```
-   https://github.com/carlosespinosamoreno99/fermax_nowifi
+   https://github.com/EspiThekiller/fermax_nowifi
    ```
    * Tipo: **Integración**
 4. Haz clic en **Añadir**, busca **Fermax NOWIFI** y pulsa **Descargar**.

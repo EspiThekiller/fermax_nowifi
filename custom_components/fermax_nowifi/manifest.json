@@ -1,10 +1,10 @@
 {
   "domain": "fermax_nowifi",
   "name": "Fermax NOWIFI",
-  "codeowners": ["@carlosespinosamoreno99"],
+  "codeowners": ["@EspiThekiller"],
   "config_flow": true,
-  "documentation": "https://github.com/carlosespinosamoreno99/fermax_nowifi",
-  "issue_tracker": "https://github.com/carlosespinosamoreno99/fermax_nowifi/issues",
+  "documentation": "https://github.com/EspiThekiller/fermax_nowifi",
+  "issue_tracker": "https://github.com/EspiThekiller/fermax_nowifi/issues",
   "iot_class": "cloud_push",
   "requirements": [
     "httpx>=0.27.0",
