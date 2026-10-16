@@ -1,0 +1,41 @@
+{
+  "entity": {
+    "button": {
+      "main_door": {
+        "default": "mdi:door-open"
+      },
+      "secondary_door": {
+        "default": "mdi:gate"
+      },
+      "f1": {
+        "default": "mdi:lightbulb-outline"
+      }
+    },
+    "switch": {
+      "camera": {
+        "default": "mdi:cctv"
+      }
+    },
+    "binary_sensor": {
+      "doorbell": {
+        "default": "mdi:doorbell-video"
+      },
+      "cloud_connection": {
+        "default": "mdi:cloud-check"
+      }
+    },
+    "sensor": {
+      "panel_state": {
+        "default": "mdi:intercom"
+      },
+      "last_ring": {
+        "default": "mdi:history"
+      }
+    },
+    "camera": {
+      "outdoor_camera": {
+        "default": "mdi:video"
+      }
+    }
+  }
+}

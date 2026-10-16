@@ -1,0 +1,72 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Fermax Blue Login",
+        "description": "Enter your Fermax Blue credentials. The integration will automatically discover your NOWIFI intercom, outdoor panel, and configure FCM push and video streaming.",
+        "data": {
+          "username": "Email",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Invalid credentials. Please verify your email and password.",
+      "cannot_connect": "Could not connect to Fermax Cloud servers.",
+      "no_devices": "No Fermax Duox Me devices found on this account."
+    },
+    "abort": {
+      "already_configured": "This Fermax account is already configured in Home Assistant."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Fermax NOWIFI Options",
+        "description": "Configure automatic stream disconnect timeouts.",
+        "data": {
+          "stream_duration": "Maximum camera preview duration (seconds)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "main_door": {
+        "name": "Open Main Door"
+      },
+      "secondary_door": {
+        "name": "Open Door 2 / Gate"
+      },
+      "f1": {
+        "name": "Courtesy Light (F1)"
+      }
+    },
+    "switch": {
+      "camera": {
+        "name": "Outdoor Camera"
+      }
+    },
+    "binary_sensor": {
+      "doorbell": {
+        "name": "Doorbell"
+      },
+      "cloud_connection": {
+        "name": "Cloud Connection"
+      }
+    },
+    "sensor": {
+      "panel_state": {
+        "name": "Panel State"
+      },
+      "last_ring": {
+        "name": "Last Ring"
+      }
+    },
+    "camera": {
+      "outdoor_camera": {
+        "name": "Outdoor Panel Camera"
+      }
+    }
+  }
+}

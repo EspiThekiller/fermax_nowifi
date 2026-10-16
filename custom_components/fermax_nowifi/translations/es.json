@@ -1,0 +1,72 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Inicio de Sesión Fermax Blue",
+        "description": "Introduce tus credenciales de la app Fermax Blue. La integración detectará automáticamente tu vivienda NOWIFI, placa exterior y configurará el canal de notificaciones y vídeo.",
+        "data": {
+          "username": "Correo Electrónico",
+          "password": "Contraseña"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Credenciales inválidas. Por favor comprueba tu correo y contraseña.",
+      "cannot_connect": "No se pudo conectar con los servidores de Fermax Cloud.",
+      "no_devices": "No se encontraron viviendas ni placas Duox Me asociadas a esta cuenta."
+    },
+    "abort": {
+      "already_configured": "Esta cuenta de Fermax ya está configurada en Home Assistant."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Fermax NOWIFI",
+        "description": "Configura los tiempos de desconexión automática del streaming.",
+        "data": {
+          "stream_duration": "Duración máxima de visualización de cámara (segundos)"
+        }
+      }
+    }
+  },
+  "entity": {
+    "button": {
+      "main_door": {
+        "name": "Abrir Puerta Principal"
+      },
+      "secondary_door": {
+        "name": "Abrir Puerta 2 / Cancela"
+      },
+      "f1": {
+        "name": "Luz de Cortesía (F1)"
+      }
+    },
+    "switch": {
+      "camera": {
+        "name": "Cámara Exterior"
+      }
+    },
+    "binary_sensor": {
+      "doorbell": {
+        "name": "Timbre"
+      },
+      "cloud_connection": {
+        "name": "Conexión Nube"
+      }
+    },
+    "sensor": {
+      "panel_state": {
+        "name": "Estado de la Placa"
+      },
+      "last_ring": {
+        "name": "Última Llamada"
+      }
+    },
+    "camera": {
+      "outdoor_camera": {
+        "name": "Cámara Placa Exterior"
+      }
+    }
+  }
+}
