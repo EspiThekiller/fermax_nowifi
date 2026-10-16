@@ -7,6 +7,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.httpx_client import get_async_client
 
 from .api import FermaxNowifiApi
@@ -32,11 +33,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     client = get_async_client(hass)
     api = FermaxNowifiApi(username, password, client=client)
 
-    await api.authenticate()
-
-    coordinator = FermaxNowifiCoordinator(hass, entry, api)
-    await coordinator.async_setup()
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await api.authenticate()
+        coordinator = FermaxNowifiCoordinator(hass, entry, api)
+        await coordinator.async_setup()
+        await coordinator.async_config_entry_first_refresh()
+    except Exception as err:
+        _LOGGER.warning("Fermax NOWIFI initialization failed, will retry: %s", err)
+        raise ConfigEntryNotReady(f"Fermax NOWIFI not ready: {err}") from err
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 

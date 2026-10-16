@@ -13,6 +13,7 @@ from typing import Any
 from firebase_messaging import FcmPushClient, FcmPushClientConfig
 from firebase_messaging.fcmregister import FcmRegister, FcmRegisterConfig
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.storage import Store
 
 from .const import (
@@ -203,11 +204,27 @@ class FermaxNotificationListener:
 
         if not self._credentials:
             _LOGGER.info("Registering new FCM push client with Firebase")
+            session = async_get_clientsession(self._hass)
             registerer = FcmRegister(
                 config=self._fcm_config,
                 credentials_updated_callback=self._on_credentials_updated,
+                http_client_session=session,
             )
-            self._credentials = await registerer.register()
+            for attempt in range(1, 4):
+                try:
+                    self._credentials = await registerer.register()
+                    break
+                except Exception as err:
+                    if attempt == 3:
+                        await registerer.close()
+                        raise
+                    _LOGGER.warning(
+                        "FCM registration attempt %d/3 failed (%s), retrying in 2s...",
+                        attempt,
+                        err,
+                    )
+                    await asyncio.sleep(2)
+
             await self._save_credentials()
             await registerer.close()
             _LOGGER.info("FCM push registration complete")
@@ -229,11 +246,13 @@ class FermaxNotificationListener:
 
         _install_fcm_log_rate_limit()
 
+        session = async_get_clientsession(self._hass)
         self._push_client = FcmPushClient(
             callback=self._on_notification,
             fcm_config=self._fcm_config,
             credentials=self._credentials,
             credentials_updated_callback=self._on_credentials_updated,
+            http_client_session=session,
             config=FcmPushClientConfig(
                 abort_on_sequential_error_count=FCM_ABORT_SEQUENTIAL_ERROR_COUNT
             ),
