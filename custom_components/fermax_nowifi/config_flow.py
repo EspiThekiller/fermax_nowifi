@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
@@ -21,10 +22,18 @@ from homeassistant.helpers.selector import (
 from .api import FermaxAuthError, FermaxNowifiApi
 from .const import (
     CONF_DOOR_PARAMS,
+    CONF_FACE_RECOGNITION_AUTO_OPEN,
+    CONF_FACE_RECOGNITION_ENABLED,
+    CONF_FACE_RECOGNITION_THRESHOLD,
+    CONF_FACE_RECOGNITION_URL,
     CONF_HOUSE_ID,
     CONF_HOUSE_TAG,
     CONF_PANEL_ID,
     CONF_STREAM_DURATION,
+    DEFAULT_FACE_RECOGNITION_AUTO_OPEN,
+    DEFAULT_FACE_RECOGNITION_ENABLED,
+    DEFAULT_FACE_RECOGNITION_THRESHOLD,
+    DEFAULT_FACE_RECOGNITION_URL,
     DEFAULT_STREAM_DURATION,
     DOMAIN,
     MAX_STREAM_DURATION,
@@ -155,6 +164,20 @@ class FermaxNowifiOptionsFlowHandler(config_entries.OptionsFlow):
         current_duration = self.config_entry.options.get(
             CONF_STREAM_DURATION, DEFAULT_STREAM_DURATION
         )
+        current_face_enabled = self.config_entry.options.get(
+            CONF_FACE_RECOGNITION_ENABLED, DEFAULT_FACE_RECOGNITION_ENABLED
+        )
+        current_face_url = self.config_entry.options.get(
+            CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
+        )
+        current_face_threshold = float(
+            self.config_entry.options.get(
+                CONF_FACE_RECOGNITION_THRESHOLD, DEFAULT_FACE_RECOGNITION_THRESHOLD
+            )
+        )
+        current_face_auto_open = self.config_entry.options.get(
+            CONF_FACE_RECOGNITION_AUTO_OPEN, DEFAULT_FACE_RECOGNITION_AUTO_OPEN
+        )
 
         options_schema = vol.Schema(
             {
@@ -167,6 +190,25 @@ class FermaxNowifiOptionsFlowHandler(config_entries.OptionsFlow):
                         mode=NumberSelectorMode.SLIDER,
                     )
                 ),
+                vol.Optional(
+                    CONF_FACE_RECOGNITION_ENABLED, default=current_face_enabled
+                ): BooleanSelector(),
+                vol.Optional(
+                    CONF_FACE_RECOGNITION_URL, default=current_face_url
+                ): TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+                vol.Optional(
+                    CONF_FACE_RECOGNITION_THRESHOLD, default=current_face_threshold
+                ): NumberSelector(
+                    NumberSelectorConfig(
+                        min=0.50,
+                        max=0.99,
+                        step=0.05,
+                        mode=NumberSelectorMode.SLIDER,
+                    )
+                ),
+                vol.Optional(
+                    CONF_FACE_RECOGNITION_AUTO_OPEN, default=current_face_auto_open
+                ): BooleanSelector(),
             }
         )
 

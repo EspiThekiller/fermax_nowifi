@@ -8,8 +8,10 @@ import logging
 import time
 from typing import Any
 
+import aiohttp
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
@@ -17,10 +19,20 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .api import FermaxNowifiApi
 from .const import (
     CONF_DOOR_PARAMS,
+    CONF_FACE_RECOGNITION_AUTO_OPEN,
+    CONF_FACE_RECOGNITION_COOLDOWN,
+    CONF_FACE_RECOGNITION_ENABLED,
+    CONF_FACE_RECOGNITION_THRESHOLD,
+    CONF_FACE_RECOGNITION_URL,
     CONF_HOUSE_ID,
     CONF_HOUSE_TAG,
     CONF_PANEL_ID,
     CONF_STREAM_DURATION,
+    DEFAULT_FACE_RECOGNITION_AUTO_OPEN,
+    DEFAULT_FACE_RECOGNITION_COOLDOWN,
+    DEFAULT_FACE_RECOGNITION_ENABLED,
+    DEFAULT_FACE_RECOGNITION_THRESHOLD,
+    DEFAULT_FACE_RECOGNITION_URL,
     DEFAULT_SIGNALING_URL,
     DEFAULT_STREAM_DURATION,
     DOMAIN,
@@ -30,6 +42,7 @@ from .const import (
     SIGNAL_CAMERA_ON,
     SIGNAL_DOOR_OPENED,
     SIGNAL_DOORBELL_RING,
+    SIGNAL_FACE_RECOGNIZED,
 )
 from .notification import FermaxNotificationListener
 from .streaming import FermaxStreamSession
@@ -64,6 +77,32 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self.stream_duration: int = entry.options.get(
             CONF_STREAM_DURATION, DEFAULT_STREAM_DURATION
         )
+        self.face_recognition_enabled: bool = entry.options.get(
+            CONF_FACE_RECOGNITION_ENABLED, DEFAULT_FACE_RECOGNITION_ENABLED
+        )
+        self.face_recognition_url: str = entry.options.get(
+            CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
+        )
+        self.face_recognition_threshold: float = float(
+            entry.options.get(
+                CONF_FACE_RECOGNITION_THRESHOLD, DEFAULT_FACE_RECOGNITION_THRESHOLD
+            )
+        )
+        self.face_recognition_auto_open: bool = entry.options.get(
+            CONF_FACE_RECOGNITION_AUTO_OPEN, DEFAULT_FACE_RECOGNITION_AUTO_OPEN
+        )
+        self.face_recognition_cooldown: int = int(
+            entry.options.get(
+                CONF_FACE_RECOGNITION_COOLDOWN, DEFAULT_FACE_RECOGNITION_COOLDOWN
+            )
+        )
+
+        self.last_recognized_face: str | None = None
+        self.last_face_confidence: float | None = None
+        self.last_face_time: str | None = None
+        self.last_face_door_opened: bool = False
+        self._last_face_open_time: float = 0.0
+        self._face_evaluating: bool = False
 
         self.notification_listener: FermaxNotificationListener | None = None
         self.stream_session: FermaxStreamSession | None = None
@@ -92,6 +131,9 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_setup(self) -> None:
         """Initialize FCM listener and register app token with Fermax."""
+        self.entry.async_on_unload(
+            self.entry.add_update_listener(self._async_options_updated)
+        )
         self.notification_listener = FermaxNotificationListener(
             self.hass, self._handle_fcm_notification
         )
@@ -100,6 +142,39 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.info("FCM push token registered: %s...", fcm_token[:20])
             await self.api.register_app_token(fcm_token)
         await self.notification_listener.start()
+
+    async def _async_options_updated(
+        self, hass: HomeAssistant, entry: ConfigEntry
+    ) -> None:
+        """Handle options update without full reload."""
+        self.stream_duration = entry.options.get(
+            CONF_STREAM_DURATION, DEFAULT_STREAM_DURATION
+        )
+        self.face_recognition_enabled = entry.options.get(
+            CONF_FACE_RECOGNITION_ENABLED, DEFAULT_FACE_RECOGNITION_ENABLED
+        )
+        self.face_recognition_url = entry.options.get(
+            CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
+        )
+        self.face_recognition_threshold = float(
+            entry.options.get(
+                CONF_FACE_RECOGNITION_THRESHOLD, DEFAULT_FACE_RECOGNITION_THRESHOLD
+            )
+        )
+        self.face_recognition_auto_open = entry.options.get(
+            CONF_FACE_RECOGNITION_AUTO_OPEN, DEFAULT_FACE_RECOGNITION_AUTO_OPEN
+        )
+        self.face_recognition_cooldown = int(
+            entry.options.get(
+                CONF_FACE_RECOGNITION_COOLDOWN, DEFAULT_FACE_RECOGNITION_COOLDOWN
+            )
+        )
+        _LOGGER.info(
+            "Fermax NOWIFI options updated (Face Recognition: %s, Threshold: %.2f, Auto-Open: %s)",
+            self.face_recognition_enabled,
+            self.face_recognition_threshold,
+            self.face_recognition_auto_open,
+        )
 
     async def async_shutdown(self) -> None:
         """Clean up streaming sessions, timers, and listeners on integration unload."""
@@ -180,6 +255,10 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                     self._start_stream_session(room_id, socket_url, fermax_token)
                 )
 
+                if self.face_recognition_enabled and self.face_recognition_url:
+                    _LOGGER.info("Starting face recognition evaluation task")
+                    self.hass.async_create_task(self._evaluate_face_recognition())
+
         elif notif_type == "Autoon":
             # If camera auto-on was requested, attach to the room
             if room_id and self.camera_active:
@@ -229,9 +308,9 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             async_dispatcher_send(self.hass, SIGNAL_CAMERA_ON.format(self.house_id))
             _LOGGER.info("Live camera stream active for room %s", room_id)
         else:
-            _LOGGER.error("Failed to establish video stream with Mediasoup SFU")
             self.camera_active = False
-            self.panel_state = "En reposo"
+            if not self.is_ringing:
+                self.panel_state = "En reposo"
 
         self.async_set_updated_data(self._build_coordinator_data())
 
@@ -361,6 +440,108 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Trigger F1 auxiliary function (courtesy light / secondary relay)."""
         return await self.api.press_f1(self.house_id)
 
+    async def _evaluate_face_recognition(self) -> None:
+        """Wait for video frame and query face recognition microservice."""
+        if self._face_evaluating:
+            return
+        self._face_evaluating = True
+        try:
+            # Poll for up to 6 seconds for the first valid frame from the camera stream
+            frame_bytes: bytes | None = None
+            for _ in range(30):
+                if not self.is_ringing:
+                    break
+                if self.latest_frame:
+                    frame_bytes = self.latest_frame
+                    break
+                await asyncio.sleep(0.2)
+
+            if not frame_bytes or not self.is_ringing:
+                _LOGGER.debug("No camera frame available for face recognition")
+                return
+
+            session = async_get_clientsession(self.hass)
+            form_data = aiohttp.FormData()
+            form_data.add_field(
+                "file",
+                frame_bytes,
+                filename="doorbell.jpg",
+                content_type="image/jpeg",
+            )
+
+            try:
+                async with session.post(
+                    self.face_recognition_url,
+                    data=form_data,
+                    timeout=aiohttp.ClientTimeout(total=5.0),
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        match = data.get("match", False)
+                        name = data.get("name", "Desconocido")
+                        confidence = float(data.get("confidence", 0.0))
+
+                        self.last_recognized_face = name
+                        self.last_face_confidence = confidence
+                        self.last_face_time = datetime.now().isoformat()
+
+                        now_ts = time.time()
+                        if match and confidence >= self.face_recognition_threshold:
+                            _LOGGER.info(
+                                "Rostro reconocido en Fermax: %s (confianza: %.1f%%)",
+                                name,
+                                confidence * 100,
+                            )
+                            if (
+                                self.face_recognition_auto_open
+                                and (now_ts - self._last_face_open_time)
+                                > self.face_recognition_cooldown
+                            ):
+                                self._last_face_open_time = now_ts
+                                self.last_face_door_opened = True
+                                _LOGGER.info(
+                                    "Apertura automática de puerta autorizada para: %s",
+                                    name,
+                                )
+                                await self.open_door()
+                            else:
+                                self.last_face_door_opened = False
+                        else:
+                            self.last_face_door_opened = False
+                            _LOGGER.debug(
+                                "Rostro no autorizado o umbral no superado: %s (%.2f)",
+                                name,
+                                confidence,
+                            )
+
+                        self.hass.bus.async_fire(
+                            "fermax_nowifi_face_recognized",
+                            {
+                                "name": name,
+                                "confidence": confidence,
+                                "match": match,
+                                "door_opened": self.last_face_door_opened,
+                                "house_id": self.house_id,
+                            },
+                        )
+                        async_dispatcher_send(
+                            self.hass, SIGNAL_FACE_RECOGNIZED.format(self.house_id)
+                        )
+                        self.async_set_updated_data(self._build_coordinator_data())
+                    else:
+                        _LOGGER.warning(
+                            "Servicio de reconocimiento facial devolvió error HTTP %d",
+                            resp.status,
+                        )
+            except Exception as exc:
+                _LOGGER.warning(
+                    "Error conectando con el servicio de reconocimiento facial (%s): %s",
+                    self.face_recognition_url,
+                    exc,
+                )
+        finally:
+            self._face_evaluating = False
+
     def _build_coordinator_data(self) -> dict[str, Any]:
         return {
             "is_ringing": self.is_ringing,
@@ -369,6 +550,10 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "panel_state": self.panel_state,
             "last_ring_time": self.last_ring_time,
             "has_photo": self.last_photo is not None,
+            "last_recognized_face": self.last_recognized_face,
+            "last_face_confidence": self.last_face_confidence,
+            "last_face_time": self.last_face_time,
+            "last_face_door_opened": self.last_face_door_opened,
         }
 
     async def _async_update_data(self) -> dict[str, Any]:

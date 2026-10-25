@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -25,6 +27,7 @@ async def async_setup_entry(
         [
             FermaxPanelStateSensor(coordinator),
             FermaxLastRingSensor(coordinator),
+            FermaxLastFaceSensor(coordinator),
         ]
     )
 
@@ -73,3 +76,27 @@ class FermaxLastRingSensor(FermaxBaseSensor):
     def native_value(self) -> str | None:
         """Return the timestamp of the last ring event."""
         return self.coordinator.last_ring_time
+
+
+class FermaxLastFaceSensor(FermaxBaseSensor):
+    """Sensor reporting the last recognized face at the outdoor panel."""
+
+    def __init__(self, coordinator: FermaxNowifiCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.house_id}_last_face"
+        self._attr_name = "Último Rostro Reconocido"
+        self._attr_icon = "mdi:face-recognition"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the name of the last recognized person or Desconocido."""
+        return self.coordinator.last_recognized_face or "Ninguno"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return face recognition metadata."""
+        return {
+            "confidence": self.coordinator.last_face_confidence,
+            "timestamp": self.coordinator.last_face_time,
+            "door_opened": self.coordinator.last_face_door_opened,
+        }

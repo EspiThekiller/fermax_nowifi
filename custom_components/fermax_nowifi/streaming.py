@@ -15,6 +15,14 @@ import socketio
 
 _LOGGER = logging.getLogger(__name__)
 
+try:
+    import aiortc  # noqa: F401
+    import pymediasoup  # noqa: F401
+    import av  # noqa: F401
+    WEBRTC_AVAILABLE = True
+except ImportError:
+    WEBRTC_AVAILABLE = False
+
 # Suppress noisy H264 decode warnings
 logging.getLogger("aiortc.codecs.h264").setLevel(logging.ERROR)
 
@@ -23,6 +31,8 @@ SIGNALING_VERSION = "0.8.2"
 
 def _patch_pymediasoup_audio_channels() -> None:
     """Fix pymediasoup bug: channels=None vs channels=1 for mono audio codecs."""
+    if not WEBRTC_AVAILABLE:
+        return
     try:
         from pymediasoup.handlers.aiortc_handler import AiortcHandler as _Handler
         from pymediasoup.rtp_parameters import RtpCapabilities as _Caps
@@ -47,6 +57,8 @@ DEFAULT_SIGNALING_URL = "https://signaling-pro-duoxme.fermax.io"
 
 def _create_switchable_audio_track() -> Any:
     """Create a silent SwitchableAudioTrack for sending audio."""
+    if not WEBRTC_AVAILABLE:
+        return None
     from aiortc import MediaStreamTrack
 
     class _Track(MediaStreamTrack):  # type: ignore[misc]
@@ -374,6 +386,13 @@ class FermaxStreamSession:
 
     async def start(self) -> bool:
         """Start Mediasoup streaming pipeline."""
+        if not WEBRTC_AVAILABLE:
+            _LOGGER.warning(
+                "WebRTC streaming de Fermax no disponible: dependencias 'aiortc' / 'pymediasoup' "
+                "no instaladas o incompatibles con av 19 en esta versión de Home Assistant (HA 2026.10+). "
+                "Las funciones de apertura de puertas, timbres y sensores continúan 100%% operativas."
+            )
+            return False
         try:
             return await self._start_inner()
         except Exception:

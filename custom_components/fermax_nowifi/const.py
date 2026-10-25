@@ -29,6 +29,7 @@ SIGNAL_CALL_ENDED = f"{DOMAIN}_call_ended_{{}}"
 SIGNAL_DOOR_OPENED = f"{DOMAIN}_door_opened_{{}}"
 SIGNAL_CAMERA_ON = f"{DOMAIN}_camera_on_{{}}"
 SIGNAL_CAMERA_OFF = f"{DOMAIN}_camera_off_{{}}"
+SIGNAL_FACE_RECOGNIZED = f"{DOMAIN}_face_recognized_{{}}"
 
 # Configuration keys
 CONF_HOUSE_ID = "house_id"
@@ -36,6 +37,17 @@ CONF_PANEL_ID = "panel_id"
 CONF_HOUSE_TAG = "house_tag"
 CONF_DOOR_PARAMS = "door_params"
 CONF_STREAM_DURATION = "stream_duration"
+CONF_FACE_RECOGNITION_ENABLED = "face_recognition_enabled"
+CONF_FACE_RECOGNITION_URL = "face_recognition_url"
+CONF_FACE_RECOGNITION_THRESHOLD = "face_recognition_threshold"
+CONF_FACE_RECOGNITION_AUTO_OPEN = "face_recognition_auto_open"
+CONF_FACE_RECOGNITION_COOLDOWN = "face_recognition_cooldown"
+
+DEFAULT_FACE_RECOGNITION_ENABLED = False
+DEFAULT_FACE_RECOGNITION_URL = "http://192.168.1.50:8000/api/v1/recognize"
+DEFAULT_FACE_RECOGNITION_THRESHOLD = 0.75
+DEFAULT_FACE_RECOGNITION_AUTO_OPEN = True
+DEFAULT_FACE_RECOGNITION_COOLDOWN = 15
 
 # Fermax Cloud API URLs and credentials
 FERMAX_AUTH_URL = "https://oauth-pro-duoxme.fermax.io/oauth/token"

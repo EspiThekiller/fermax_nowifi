@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, MANUFACTURER, MODEL_NOWIFI
 from .coordinator import FermaxNowifiCoordinator
+from .streaming import WEBRTC_AVAILABLE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -31,15 +32,18 @@ async def async_setup_entry(
     async_add_entities([FermaxNowifiCamera(coordinator)])
 
 
-def _create_standby_image(text: str = "FERMAX NOWIFI • En reposo") -> bytes:
+def _create_standby_image(
+    text: str = "FERMAX NOWIFI • En reposo",
+    subtitle: str = "La cámara se activa automáticamente al llamar o por switch",
+) -> bytes:
     """Generate a clean 720x480 standby placeholder JPEG in memory."""
     img = Image.new("RGB", (720, 480), color=(15, 23, 42))
     draw = ImageDraw.Draw(img)
     font = ImageFont.load_default()
 
     draw.rectangle([(20, 20), (700, 460)], outline=(30, 41, 59), width=2)
-    draw.text((250, 225), text, fill=(148, 163, 184), font=font)
-    draw.text((215, 255), "La cámara se activa automáticamente al llamar o por switch", fill=(71, 85, 105), font=font)
+    draw.text((220, 225), text, fill=(148, 163, 184), font=font)
+    draw.text((180, 255), subtitle, fill=(71, 85, 105), font=font)
 
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=75)
@@ -98,6 +102,13 @@ class FermaxNowifiCamera(CoordinatorEntity[FermaxNowifiCoordinator], Camera):
         if frame:
             return frame
 
+        if not WEBRTC_AVAILABLE and self.coordinator.camera_active:
+            return await asyncio.to_thread(
+                _create_standby_image,
+                "STREAMING WEBRTC PENDIENTE",
+                "aiortc/av en espera de actualización compatible con HA 2026.10+",
+            )
+
         if self.coordinator.camera_active:
             return await asyncio.to_thread(_create_standby_image, "CONECTANDO A PLACA FERMAX...")
 
@@ -127,6 +138,12 @@ class FermaxNowifiCamera(CoordinatorEntity[FermaxNowifiCoordinator], Camera):
                     frame = stream.latest_frame
                 elif self.coordinator.last_photo:
                     frame = self.coordinator.last_photo
+                elif not WEBRTC_AVAILABLE and self.coordinator.camera_active:
+                    frame = await asyncio.to_thread(
+                        _create_standby_image,
+                        "STREAMING WEBRTC PENDIENTE",
+                        "aiortc/av en espera de actualización compatible con HA 2026.10+",
+                    )
                 elif self.coordinator.camera_active:
                     frame = await asyncio.to_thread(_create_standby_image, "CONECTANDO A PLACA FERMAX...")
                 else:

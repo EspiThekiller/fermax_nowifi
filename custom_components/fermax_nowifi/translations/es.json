@@ -23,9 +23,13 @@
     "step": {
       "init": {
         "title": "Opciones de Fermax NOWIFI",
-        "description": "Configura los tiempos de desconexión automática del streaming.",
+        "description": "Configura los tiempos de cámara y el reconocimiento facial automático.",
         "data": {
-          "stream_duration": "Duración máxima de visualización de cámara (segundos)"
+          "stream_duration": "Duración de visualización de cámara (segundos)",
+          "face_recognition_enabled": "Activar Reconocimiento Facial",
+          "face_recognition_url": "URL del microservicio FastAPI (ej. http://192.168.1.50:8000/api/v1/recognize)",
+          "face_recognition_threshold": "Umbral mínimo de confianza (0.50 a 0.99)",
+          "face_recognition_auto_open": "Abrir puerta automáticamente si se reconoce el rostro"
         }
       }
     }
@@ -61,6 +65,9 @@
       },
       "last_ring": {
         "name": "Última Llamada"
+      },
+      "last_face": {
+        "name": "Último Rostro Reconocido"
       }
     },
     "camera": {

@@ -10,10 +10,9 @@
     "httpx>=0.27.0",
     "firebase-messaging>=0.4.5",
     "python-socketio>=5.12.0",
-    "pymediasoup>=1.1.0",
     "Pillow>=10.0.0",
-    "aiortc",
-    "av"
+    "aiortc @ https://raw.githubusercontent.com/EspiThekiller/fermax_nowifi/main/wheels/aiortc-1.15.1-py3-none-any.whl",
+    "pymediasoup>=1.5.0"
   ],
-  "version": "1.0.2"
+  "version": "1.0.3"
 }
