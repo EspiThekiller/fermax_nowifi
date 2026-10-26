@@ -8,7 +8,7 @@
   <a href="https://github.com/hacs/default"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge" alt="HACS Badge"></a>
   <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home--Assistant-2024.6+-blue.svg?style=for-the-badge&logo=home-assistant" alt="Home Assistant"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT"></a>
-  <img src="https://img.shields.io/badge/Version-1.0.0-emerald.svg?style=for-the-badge" alt="Version 1.0.0">
+  <img src="https://img.shields.io/badge/Version-1.0.3-emerald.svg?style=for-the-badge" alt="Version 1.0.3">
 </p>
 
 Integración completa para **Home Assistant (HACS)** diseñada específicamente para sistemas de videoportero **Fermax Duox Me** en instalaciones **NOWIFI / 4G** (placas exteriores Skyline y Cityline con módem 4G integrado).
@@ -41,6 +41,7 @@ Esta integración implementa de forma nativa todos estos contratos de datos desc
 | **Cámara Placa Exterior** | `camera` | Emisión de vídeo en directo a **720x480 @ 25 FPS** con distintivo `● LIVE [HH:MM:SS]`. |
 | **Estado de la Placa** | `sensor` | Muestra en tiempo real: *En reposo*, *Llamando al timbre*, *Cámara en directo*, *Placa ocupada*. |
 | **Última Llamada** | `sensor` | Registra la hora exacta en la que se pulsó el timbre por última vez. |
+| **Último Rostro Reconocido** | `sensor` | Muestra el nombre de la persona autorizada identificada por el microservicio facial y su confianza. |
 
 ---
 

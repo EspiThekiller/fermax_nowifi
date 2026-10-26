@@ -10,7 +10,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, MANUFACTURER, MODEL_NOWIFI
+from .const import DOMAIN, INTEGRATION_VERSION, MANUFACTURER, MODEL_NOWIFI
 from .coordinator import FermaxNowifiCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ class FermaxBaseButton(CoordinatorEntity[FermaxNowifiCoordinator], ButtonEntity)
             name=f"Fermax NOWIFI ({coordinator.house_tag})",
             manufacturer=MANUFACTURER,
             model=MODEL_NOWIFI,
-            sw_version="1.0.0",
+            sw_version=INTEGRATION_VERSION,
         )
 
 

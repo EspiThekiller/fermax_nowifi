@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 DOMAIN = "fermax_nowifi"
+INTEGRATION_VERSION = "1.0.3"
 MANUFACTURER = "Fermax"
 MODEL_NOWIFI = "Duox Me (NOWIFI / 4G Skyline)"
 

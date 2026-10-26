@@ -131,9 +131,6 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     async def async_setup(self) -> None:
         """Initialize FCM listener and register app token with Fermax."""
-        self.entry.async_on_unload(
-            self.entry.add_update_listener(self._async_options_updated)
-        )
         self.notification_listener = FermaxNotificationListener(
             self.hass, self._handle_fcm_notification
         )
@@ -142,39 +139,6 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             _LOGGER.info("FCM push token registered: %s...", fcm_token[:20])
             await self.api.register_app_token(fcm_token)
         await self.notification_listener.start()
-
-    async def _async_options_updated(
-        self, hass: HomeAssistant, entry: ConfigEntry
-    ) -> None:
-        """Handle options update without full reload."""
-        self.stream_duration = entry.options.get(
-            CONF_STREAM_DURATION, DEFAULT_STREAM_DURATION
-        )
-        self.face_recognition_enabled = entry.options.get(
-            CONF_FACE_RECOGNITION_ENABLED, DEFAULT_FACE_RECOGNITION_ENABLED
-        )
-        self.face_recognition_url = entry.options.get(
-            CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
-        )
-        self.face_recognition_threshold = float(
-            entry.options.get(
-                CONF_FACE_RECOGNITION_THRESHOLD, DEFAULT_FACE_RECOGNITION_THRESHOLD
-            )
-        )
-        self.face_recognition_auto_open = entry.options.get(
-            CONF_FACE_RECOGNITION_AUTO_OPEN, DEFAULT_FACE_RECOGNITION_AUTO_OPEN
-        )
-        self.face_recognition_cooldown = int(
-            entry.options.get(
-                CONF_FACE_RECOGNITION_COOLDOWN, DEFAULT_FACE_RECOGNITION_COOLDOWN
-            )
-        )
-        _LOGGER.info(
-            "Fermax NOWIFI options updated (Face Recognition: %s, Threshold: %.2f, Auto-Open: %s)",
-            self.face_recognition_enabled,
-            self.face_recognition_threshold,
-            self.face_recognition_auto_open,
-        )
 
     async def async_shutdown(self) -> None:
         """Clean up streaming sessions, timers, and listeners on integration unload."""

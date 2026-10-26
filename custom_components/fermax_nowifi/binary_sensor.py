@@ -15,6 +15,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
+    INTEGRATION_VERSION,
     MANUFACTURER,
     MODEL_NOWIFI,
     SIGNAL_CALL_ENDED,
@@ -51,7 +52,7 @@ class FermaxBaseBinarySensor(CoordinatorEntity[FermaxNowifiCoordinator], BinaryS
             name=f"Fermax NOWIFI ({coordinator.house_tag})",
             manufacturer=MANUFACTURER,
             model=MODEL_NOWIFI,
-            sw_version="1.0.0",
+            sw_version=INTEGRATION_VERSION,
         )
 
 

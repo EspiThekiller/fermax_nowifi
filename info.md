@@ -4,6 +4,8 @@
 
 # Fermax NOWIFI para Home Assistant (HACS)
 
+[![Version](https://img.shields.io/badge/Version-1.0.3-emerald.svg?style=flat-square)](https://github.com/EspiThekiller/fermax_nowifi)
+
 Integración completa para sistemas de videoportero **Fermax Duox Me** en instalaciones **NOWIFI / 4G (Placas Skyline y Cityline)**.
 
 Permite conectar Home Assistant directamente con la nube Fermax Blue sin necesidad de monitor con conexión Wi-Fi en la vivienda.
