@@ -28,6 +28,7 @@
           "stream_duration": "Maximum camera preview duration (seconds)",
           "face_recognition_enabled": "Enable Facial Recognition",
           "face_recognition_url": "FastAPI Microservice URL (e.g. http://192.168.1.50:8000/api/v1/recognize)",
+          "face_recognition_api_key": "Microservice API Key (optional)",
           "face_recognition_threshold": "Minimum confidence threshold (0.50 to 0.99)",
           "face_recognition_auto_open": "Automatically open door if face is recognized"
         }
@@ -68,6 +69,9 @@
       },
       "last_face": {
         "name": "Last Recognized Face"
+      },
+      "face_confidence": {
+        "name": "Face Recognition Confidence"
       }
     },
     "camera": {

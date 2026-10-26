@@ -22,6 +22,7 @@ from homeassistant.helpers.selector import (
 from .api import FermaxAuthError, FermaxNowifiApi
 from .const import (
     CONF_DOOR_PARAMS,
+    CONF_FACE_RECOGNITION_API_KEY,
     CONF_FACE_RECOGNITION_AUTO_OPEN,
     CONF_FACE_RECOGNITION_ENABLED,
     CONF_FACE_RECOGNITION_THRESHOLD,
@@ -30,6 +31,7 @@ from .const import (
     CONF_HOUSE_TAG,
     CONF_PANEL_ID,
     CONF_STREAM_DURATION,
+    DEFAULT_FACE_RECOGNITION_API_KEY,
     DEFAULT_FACE_RECOGNITION_AUTO_OPEN,
     DEFAULT_FACE_RECOGNITION_ENABLED,
     DEFAULT_FACE_RECOGNITION_THRESHOLD,
@@ -167,6 +169,9 @@ class FermaxNowifiOptionsFlowHandler(config_entries.OptionsFlow):
         current_face_url = self.config_entry.options.get(
             CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
         )
+        current_face_api_key = self.config_entry.options.get(
+            CONF_FACE_RECOGNITION_API_KEY, DEFAULT_FACE_RECOGNITION_API_KEY
+        )
         current_face_threshold = float(
             self.config_entry.options.get(
                 CONF_FACE_RECOGNITION_THRESHOLD, DEFAULT_FACE_RECOGNITION_THRESHOLD
@@ -193,6 +198,11 @@ class FermaxNowifiOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Optional(
                     CONF_FACE_RECOGNITION_URL, default=current_face_url
                 ): TextSelector(TextSelectorConfig(type=TextSelectorType.URL)),
+                vol.Optional(
+                    CONF_FACE_RECOGNITION_API_KEY, default=current_face_api_key
+                ): TextSelector(
+                    TextSelectorConfig(type=TextSelectorType.PASSWORD)
+                ),
                 vol.Optional(
                     CONF_FACE_RECOGNITION_THRESHOLD, default=current_face_threshold
                 ): NumberSelector(

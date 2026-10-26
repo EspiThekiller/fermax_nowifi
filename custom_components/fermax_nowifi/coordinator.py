@@ -19,6 +19,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .api import FermaxNowifiApi
 from .const import (
     CONF_DOOR_PARAMS,
+    CONF_FACE_RECOGNITION_API_KEY,
     CONF_FACE_RECOGNITION_AUTO_OPEN,
     CONF_FACE_RECOGNITION_COOLDOWN,
     CONF_FACE_RECOGNITION_ENABLED,
@@ -28,6 +29,7 @@ from .const import (
     CONF_HOUSE_TAG,
     CONF_PANEL_ID,
     CONF_STREAM_DURATION,
+    DEFAULT_FACE_RECOGNITION_API_KEY,
     DEFAULT_FACE_RECOGNITION_AUTO_OPEN,
     DEFAULT_FACE_RECOGNITION_COOLDOWN,
     DEFAULT_FACE_RECOGNITION_ENABLED,
@@ -82,6 +84,9 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         )
         self.face_recognition_url: str = entry.options.get(
             CONF_FACE_RECOGNITION_URL, DEFAULT_FACE_RECOGNITION_URL
+        )
+        self.face_recognition_api_key: str = entry.options.get(
+            CONF_FACE_RECOGNITION_API_KEY, DEFAULT_FACE_RECOGNITION_API_KEY
         )
         self.face_recognition_threshold: float = float(
             entry.options.get(
@@ -433,10 +438,15 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 content_type="image/jpeg",
             )
 
+            headers: dict[str, str] = {}
+            if self.face_recognition_api_key:
+                headers["X-API-Key"] = self.face_recognition_api_key
+
             try:
                 async with session.post(
                     self.face_recognition_url,
                     data=form_data,
+                    headers=headers,
                     timeout=aiohttp.ClientTimeout(total=5.0),
                 ) as resp:
                     if resp.status == 200:

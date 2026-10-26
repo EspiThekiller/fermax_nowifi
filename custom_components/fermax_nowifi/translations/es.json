@@ -28,6 +28,7 @@
           "stream_duration": "Duración de visualización de cámara (segundos)",
           "face_recognition_enabled": "Activar Reconocimiento Facial",
           "face_recognition_url": "URL del microservicio FastAPI (ej. http://192.168.1.50:8000/api/v1/recognize)",
+          "face_recognition_api_key": "Clave API del microservicio (opcional)",
           "face_recognition_threshold": "Umbral mínimo de confianza (0.50 a 0.99)",
           "face_recognition_auto_open": "Abrir puerta automáticamente si se reconoce el rostro"
         }
@@ -68,6 +69,9 @@
       },
       "last_face": {
         "name": "Último Rostro Reconocido"
+      },
+      "face_confidence": {
+        "name": "Confianza Reconocimiento Facial"
       }
     },
     "camera": {

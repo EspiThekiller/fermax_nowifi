@@ -41,7 +41,8 @@ Esta integración implementa de forma nativa todos estos contratos de datos desc
 | **Cámara Placa Exterior** | `camera` | Emisión de vídeo en directo a **720x480 @ 25 FPS** con distintivo `● LIVE [HH:MM:SS]`. |
 | **Estado de la Placa** | `sensor` | Muestra en tiempo real: *En reposo*, *Llamando al timbre*, *Cámara en directo*, *Placa ocupada*. |
 | **Última Llamada** | `sensor` | Registra la hora exacta en la que se pulsó el timbre por última vez. |
-| **Último Rostro Reconocido** | `sensor` | Muestra el nombre de la persona autorizada identificada por el microservicio facial y su confianza. |
+| **Último Rostro Reconocido** | `sensor` | Muestra el nombre de la persona autorizada identificada por el microservicio facial. Si el reconocimiento está desactivado, pasa a *No disponible*. |
+| **Confianza Reconocimiento Facial** | `sensor` | Porcentaje de coincidencia (0-100%) de la persona frente a la placa para automatizaciones. Si está desactivado, pasa a *No disponible*. |
 
 ---
 

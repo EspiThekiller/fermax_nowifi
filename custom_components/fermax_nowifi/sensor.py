@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -28,6 +28,7 @@ async def async_setup_entry(
             FermaxPanelStateSensor(coordinator),
             FermaxLastRingSensor(coordinator),
             FermaxLastFaceSensor(coordinator),
+            FermaxFaceConfidenceSensor(coordinator),
         ]
     )
 
@@ -88,6 +89,11 @@ class FermaxLastFaceSensor(FermaxBaseSensor):
         self._attr_icon = "mdi:face-recognition"
 
     @property
+    def available(self) -> bool:
+        """Return True only if face recognition is enabled in options."""
+        return self.coordinator.face_recognition_enabled
+
+    @property
     def native_value(self) -> str | None:
         """Return the name of the last recognized person or Desconocido."""
         return self.coordinator.last_recognized_face or "Ninguno"
@@ -99,4 +105,43 @@ class FermaxLastFaceSensor(FermaxBaseSensor):
             "confidence": self.coordinator.last_face_confidence,
             "timestamp": self.coordinator.last_face_time,
             "door_opened": self.coordinator.last_face_door_opened,
+        }
+
+
+class FermaxFaceConfidenceSensor(FermaxBaseSensor):
+    """Sensor reporting the face recognition confidence percentage of the current/last frame."""
+
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: FermaxNowifiCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.house_id}_face_confidence"
+        self._attr_name = "Confianza Reconocimiento Facial"
+        self._attr_icon = "mdi:percent-face"
+
+    @property
+    def available(self) -> bool:
+        """Return True only if face recognition is enabled in options."""
+        return self.coordinator.face_recognition_enabled
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the confidence score as a percentage (0.0 to 100.0)."""
+        if self.coordinator.last_face_confidence is None:
+            return None
+        return round(self.coordinator.last_face_confidence * 100.0, 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return detailed confidence parameters for automations."""
+        conf = self.coordinator.last_face_confidence
+        thresh = self.coordinator.face_recognition_threshold
+        return {
+            "candidate_name": self.coordinator.last_recognized_face,
+            "raw_confidence": conf,
+            "threshold_percent": round(thresh * 100.0, 1),
+            "threshold_met": (conf >= thresh) if conf is not None else False,
+            "door_opened": self.coordinator.last_face_door_opened,
+            "timestamp": self.coordinator.last_face_time,
         }
