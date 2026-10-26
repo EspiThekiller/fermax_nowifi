@@ -225,8 +225,8 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 )
 
                 if self.face_recognition_enabled and self.face_recognition_url:
-                    _LOGGER.info("Starting face recognition evaluation task")
-                    self.hass.async_create_task(self._evaluate_face_recognition())
+                    _LOGGER.info("Starting continuous face recognition loop")
+                    self.hass.async_create_task(self._evaluate_face_recognition_loop())
 
         elif notif_type == "Autoon":
             # If camera auto-on was requested, attach to the room
@@ -276,6 +276,8 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self.panel_state = "Cámara en directo"
             async_dispatcher_send(self.hass, SIGNAL_CAMERA_ON.format(self.house_id))
             _LOGGER.info("Live camera stream active for room %s", room_id)
+            if self.face_recognition_enabled and self.face_recognition_url:
+                self.hass.async_create_task(self._evaluate_face_recognition_loop())
         else:
             self.camera_active = False
             if not self.is_ringing:
@@ -409,112 +411,131 @@ class FermaxNowifiCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Trigger F1 auxiliary function (courtesy light / secondary relay)."""
         return await self.api.press_f1(self.house_id)
 
-    async def _evaluate_face_recognition(self) -> None:
-        """Wait for video frame and query face recognition microservice."""
+    async def _evaluate_face_recognition_loop(self) -> None:
+        """Continuously evaluate camera frames while the camera stream or call is active."""
         if self._face_evaluating:
             return
         self._face_evaluating = True
+        _LOGGER.info("Starting continuous face recognition evaluation loop")
+        session = async_get_clientsession(self.hass)
+        last_frame_hash: int | None = None
+        consecutive_errors: int = 0
+
         try:
-            # Poll for up to 6 seconds for the first valid frame from the camera stream
-            frame_bytes: bytes | None = None
-            for _ in range(30):
-                if not self.is_ringing:
-                    break
-                if self.latest_frame:
-                    frame_bytes = self.latest_frame
-                    break
-                await asyncio.sleep(0.2)
+            while (self.camera_active or self.is_ringing) and self.face_recognition_enabled:
+                frame_bytes = self.latest_frame
+                if not frame_bytes:
+                    await asyncio.sleep(0.4)
+                    continue
 
-            if not frame_bytes or not self.is_ringing:
-                _LOGGER.debug("No camera frame available for face recognition")
-                return
+                # Quick hash check to avoid re-evaluating the identical frozen frame
+                frame_hash = hash(frame_bytes[:48] + frame_bytes[-48:])
+                if frame_hash == last_frame_hash:
+                    await asyncio.sleep(0.4)
+                    continue
+                last_frame_hash = frame_hash
 
-            session = async_get_clientsession(self.hass)
-            form_data = aiohttp.FormData()
-            form_data.add_field(
-                "file",
-                frame_bytes,
-                filename="doorbell.jpg",
-                content_type="image/jpeg",
-            )
+                form_data = aiohttp.FormData()
+                form_data.add_field(
+                    "file",
+                    frame_bytes,
+                    filename="doorbell.jpg",
+                    content_type="image/jpeg",
+                )
 
-            headers: dict[str, str] = {}
-            if self.face_recognition_api_key:
-                headers["X-API-Key"] = self.face_recognition_api_key
+                headers: dict[str, str] = {}
+                if self.face_recognition_api_key:
+                    headers["X-API-Key"] = self.face_recognition_api_key
 
-            try:
-                async with session.post(
-                    self.face_recognition_url,
-                    data=form_data,
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=5.0),
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        match = data.get("match", False)
-                        name = data.get("name", "Desconocido")
-                        confidence = float(data.get("confidence", 0.0))
+                try:
+                    async with session.post(
+                        self.face_recognition_url,
+                        data=form_data,
+                        headers=headers,
+                        timeout=aiohttp.ClientTimeout(total=3.5),
+                    ) as resp:
+                        if resp.status == 200:
+                            consecutive_errors = 0
+                            data = await resp.json()
+                            match = data.get("match", False)
+                            name = data.get("name", "Desconocido")
+                            confidence = float(data.get("confidence", 0.0))
 
-                        self.last_recognized_face = name
-                        self.last_face_confidence = confidence
-                        self.last_face_time = datetime.now().isoformat()
+                            self.last_recognized_face = name
+                            self.last_face_confidence = confidence
+                            self.last_face_time = datetime.now().isoformat()
 
-                        now_ts = time.time()
-                        if match and confidence >= self.face_recognition_threshold:
-                            _LOGGER.info(
-                                "Rostro reconocido en Fermax: %s (confianza: %.1f%%)",
-                                name,
-                                confidence * 100,
-                            )
-                            if (
-                                self.face_recognition_auto_open
-                                and (now_ts - self._last_face_open_time)
-                                > self.face_recognition_cooldown
-                            ):
-                                self._last_face_open_time = now_ts
-                                self.last_face_door_opened = True
+                            now_ts = time.time()
+                            door_just_opened = False
+
+                            if match and confidence >= self.face_recognition_threshold:
                                 _LOGGER.info(
-                                    "Apertura automática de puerta autorizada para: %s",
+                                    "Rostro reconocido en Fermax: %s (confianza: %.1f%%)",
                                     name,
+                                    confidence * 100,
                                 )
-                                await self.open_door()
+                                if (
+                                    self.face_recognition_auto_open
+                                    and (now_ts - self._last_face_open_time)
+                                    > self.face_recognition_cooldown
+                                ):
+                                    self._last_face_open_time = now_ts
+                                    self.last_face_door_opened = True
+                                    door_just_opened = True
+                                    _LOGGER.info(
+                                        "Apertura automática de puerta autorizada para: %s",
+                                        name,
+                                    )
+                                    await self.open_door()
+                                else:
+                                    self.last_face_door_opened = False
                             else:
                                 self.last_face_door_opened = False
-                        else:
-                            self.last_face_door_opened = False
-                            _LOGGER.debug(
-                                "Rostro no autorizado o umbral no superado: %s (%.2f)",
-                                name,
-                                confidence,
-                            )
+                                _LOGGER.debug(
+                                    "Rostro evaluado: %s (confianza: %.1f%%)",
+                                    name,
+                                    confidence * 100,
+                                )
 
-                        self.hass.bus.async_fire(
-                            "fermax_nowifi_face_recognized",
-                            {
-                                "name": name,
-                                "confidence": confidence,
-                                "match": match,
-                                "door_opened": self.last_face_door_opened,
-                                "house_id": self.house_id,
-                            },
-                        )
-                        async_dispatcher_send(
-                            self.hass, SIGNAL_FACE_RECOGNIZED.format(self.house_id)
-                        )
-                        self.async_set_updated_data(self._build_coordinator_data())
-                    else:
+                            self.hass.bus.async_fire(
+                                "fermax_nowifi_face_recognized",
+                                {
+                                    "name": name,
+                                    "confidence": confidence,
+                                    "match": match,
+                                    "door_opened": self.last_face_door_opened,
+                                    "house_id": self.house_id,
+                                },
+                            )
+                            async_dispatcher_send(
+                                self.hass, SIGNAL_FACE_RECOGNIZED.format(self.house_id)
+                            )
+                            self.async_set_updated_data(self._build_coordinator_data())
+
+                            if door_just_opened:
+                                # Stop loop once door is opened to avoid unnecessary evaluation
+                                break
+                        else:
+                            _LOGGER.warning(
+                                "Servicio de reconocimiento facial devolvió HTTP %d",
+                                resp.status,
+                            )
+                except Exception as exc:
+                    consecutive_errors += 1
+                    if consecutive_errors <= 2:
                         _LOGGER.warning(
-                            "Servicio de reconocimiento facial devolvió error HTTP %d",
-                            resp.status,
+                            "Error enviando fotograma al microservicio facial (%s): %s",
+                            self.face_recognition_url,
+                            exc,
                         )
-            except Exception as exc:
-                _LOGGER.warning(
-                    "Error conectando con el servicio de reconocimiento facial (%s): %s",
-                    self.face_recognition_url,
-                    exc,
-                )
+                    await asyncio.sleep(1.5)
+                    continue
+
+                # Wait ~1.0 second between continuous frame evaluations
+                await asyncio.sleep(1.0)
         finally:
             self._face_evaluating = False
+            _LOGGER.info("Face recognition evaluation loop ended")
 
     def _build_coordinator_data(self) -> dict[str, Any]:
         return {
